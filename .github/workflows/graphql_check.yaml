@@ -1,0 +1,116 @@
+name: Sonarcloud
+
+env:
+  PHP: '7.4'
+
+on: [push]
+
+jobs:
+  install_shop_with_module:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone testing environment v3.0.0
+        run: git clone https://github.com/OXID-eSales/docker-eshop-sdk.git . && git reset --hard v3.0.0
+
+      - name: Clone the shop
+        run: git clone --depth 1 https://github.com/OXID-eSales/oxideshop_ce.git --branch b-6.5.x --single-branch source
+
+      - name: Cache current installation
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./*
+          key: shopInstallation-${{ env.PHP }}-${{ github.sha }}
+
+      - name: Prepare container configuration
+        run: |
+          make setup
+          make addbasicservices
+
+          perl -pi\
+            -e "s#PHP_VERSION=.*#PHP_VERSION='${{ env.PHP }}'#g;"\
+            .env
+
+          perl -pi\
+            -e 's#display_errors =.*#display_errors = false#g;'\
+            -e 'print "xdebug.max_nesting_level=1000\nxdebug.mode=coverage\n\n"'\
+            containers/php-fpm/custom.ini
+
+          perl -pi\
+            -e 's#/var/www/#/var/www/source/#g;'\
+            containers/httpd/project.conf
+
+      - name: Prepare shop configuration
+        run: |
+            cp source/source/config.inc.php.dist source/source/config.inc.php
+            perl -pi\
+              -e 'print "SetEnvIf Authorization \"(.*)\" HTTP_AUTHORIZATION=\$1\n\n" if $. == 1'\
+              source/source/.htaccess
+            perl -pi\
+              -e 's#<dbHost>#mysql#g;'\
+              -e 's#<dbUser>#root#g;'\
+              -e 's#<dbName>#example#g;'\
+              -e 's#<dbPwd>#root#g;'\
+              -e 's#<dbPort>#3306#g;'\
+              -e 's#<sShopURL>#http://localhost.local/#g;'\
+              -e 's#<sShopDir>#/var/www/source/#g;'\
+              -e 's#<sCompileDir>#/var/www/source/tmp/#g;'\
+              source/source/config.inc.php
+
+      - name: Start containers
+        run: |
+          make up
+          sleep 2
+
+      - name: Checkout current module
+        uses: actions/checkout@v2
+        with:
+          path: source/test-module
+
+      - name: Install dependencies for module
+        run: docker-compose exec -T --workdir='/var/www/test-module' php composer update --no-interaction
+
+      - name: Require the module
+        run: |
+          docker-compose exec -T \
+            php composer config repositories.oxid-esales/grapqhl-storefront \
+            --json '{"type":"path", "url":"./test-module", "options": {"symlink": true}}'
+
+          docker-compose exec -T \
+            php composer require oxid-esales/graphql-storefront:* --no-update
+
+      - name: Install all dependencies and reset the shop
+        run: |
+          docker-compose exec -T php composer update --no-interaction
+          docker-compose exec -T php php vendor/bin/reset-shop
+
+      - name: Stop containers
+        run: |
+          docker-compose down
+          sleep 2
+
+  graphql_schema_check:
+    name: Check Schema
+    needs: [ install_shop_with_module ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Load current installation from cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./*
+          key: shopInstallation-${{ env.PHP }}-${{ github.sha }}
+          restore-keys: |
+            shopInstallation-${{ env.PHP }}-${{ github.sha }}
+      - name: Start containers
+        run: |
+            make up
+            sleep 2
+
+      - uses: kamilkisiela/graphql-inspector@master
+        with:
+          schema: 'http://localhost.local/graphql'
+          endpoint: 'http://localhost.local/graphql'
+          fail-on-breaking: false
+      
