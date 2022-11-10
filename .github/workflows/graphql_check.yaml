@@ -1,4 +1,4 @@
-name: Sonarcloud
+name: GraphQL Schema Check
 
 env:
   PHP: '7.4'
