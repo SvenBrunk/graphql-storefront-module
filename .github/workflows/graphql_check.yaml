@@ -16,7 +16,7 @@ jobs:
         run: git clone --depth 1 https://github.com/OXID-eSales/oxideshop_ce.git --branch b-6.5.x --single-branch source
 
       - name: Cache current installation
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ./*
@@ -63,7 +63,7 @@ jobs:
           sleep 2
 
       - name: Checkout current module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: source/test-module
 
@@ -96,7 +96,7 @@ jobs:
 
     steps:
       - name: Load current installation from cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ./*
