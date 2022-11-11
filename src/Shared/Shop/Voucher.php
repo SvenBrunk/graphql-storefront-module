@@ -12,7 +12,7 @@ namespace OxidEsales\GraphQL\Storefront\Shared\Shop;
 use OxidEsales\Eshop\Application\Model\Basket as EshopBasketModel;
 use OxidEsales\Eshop\Application\Model\Discount as EshopDiscountModel;
 use OxidEsales\Eshop\Core\Exception\ObjectException as EshopObjectException;
-use OxidEsales\GraphQL\Storefront\Basket\Service\Basket as BasketService;
+use OxidEsales\GraphQL\Storefront\Basket\Service\BasketFinder as BasketFinderService;
 use OxidEsales\GraphQL\Storefront\Shared\Infrastructure\Basket as SharedBasketInfrastructure;
 use TheCodingMachine\GraphQLite\Types\ID;
 
@@ -46,7 +46,7 @@ class Voucher extends Voucher_parent
     {
         if (
             (0 < $this->getRawFieldData('oxreserved')) &&
-            ($this->getRawFieldData('oxreserved') < (time() - $this->_getVoucherTimeout()))
+            ($this->getRawFieldData('oxreserved') < (time() - $this->getVoucherTimeout()))
         ) {
             throw new EshopObjectException('Reservation has timed out');
         }
@@ -54,22 +54,22 @@ class Voucher extends Voucher_parent
 
     public function isForProduct(): bool
     {
-        return $this->_isProductVoucher();
+        return $this->isProductVoucher();
     }
 
     public function isForCategory(): bool
     {
-        return $this->_isCategoryVoucher();
+        return $this->isCategoryVoucher();
     }
 
     public function getDiscountFromSerie(): EshopDiscountModel
     {
-        return $this->_getSerieDiscount();
+        return $this->getSerieDiscount();
     }
 
-    protected function _getBasketItems($oDiscount = null): array
+    protected function getBasketItems($oDiscount = null): array
     {
-        $items = parent::_getBasketItems($oDiscount);
+        $items = parent::getBasketItems($oDiscount);
 
         if (empty($items)) {
             $items = $this->getGraphQLBasketItems($oDiscount);
@@ -133,8 +133,8 @@ class Voucher extends Voucher_parent
         $basketId = $this->getRawFieldData('oegql_basketid');
 
         if ($basketId) {
-            /** @var BasketService $basketService */
-            $basketService = $this->getContainer()->get(BasketService::class);
+            /** @var BasketFinderService $basketService */
+            $basketService = $this->getContainer()->get(BasketFinderService::class);
             $basket = $basketService->basket(new ID($basketId));
 
             /** @var SharedBasketInfrastructure $sharedBasketInfrastructure */

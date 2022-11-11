@@ -13,6 +13,9 @@ use OxidEsales\GraphQL\Storefront\Basket\DataType\Basket as BasketDataType;
 use OxidEsales\GraphQL\Storefront\Basket\DataType\PublicBasket as PublicBasketDataType;
 use OxidEsales\GraphQL\Storefront\Basket\Event\BeforeBasketModify;
 use OxidEsales\GraphQL\Storefront\Basket\Service\Basket as BasketService;
+use OxidEsales\GraphQL\Storefront\Basket\Service\BasketFinder as BasketFinderService;
+use OxidEsales\GraphQL\Storefront\Basket\Service\BasketItem as BasketItemService;
+use OxidEsales\GraphQL\Storefront\Basket\Service\BasketVoucher;
 use OxidEsales\GraphQL\Storefront\Basket\Service\PlaceOrder as PlaceOrderService;
 use OxidEsales\GraphQL\Storefront\DeliveryMethod\DataType\BasketDeliveryMethod as BasketDeliveryMethodDataType;
 use OxidEsales\GraphQL\Storefront\Order\DataType\Order as OrderDataType;
@@ -36,14 +39,26 @@ final class Basket
     /** @var EventDispatcherInterface */
     private $eventDispatcher;
 
+    private BasketFinderService $basketFinderService;
+
+    private BasketItemService $basketItemService;
+
+    private BasketVoucher $basketVoucherService;
+
     public function __construct(
         BasketService $basketService,
         PlaceOrderService $placeOrderService,
-        EventDispatcherInterface $eventDispatcher
+        EventDispatcherInterface $eventDispatcher,
+        BasketFinderService $basketFinderService,
+        BasketItemService $basketItemService,
+        BasketVoucher $basketVoucherService
     ) {
         $this->basketService = $basketService;
         $this->placeOrderService = $placeOrderService;
         $this->eventDispatcher = $eventDispatcher;
+        $this->basketFinderService = $basketFinderService;
+        $this->basketItemService = $basketItemService;
+        $this->basketVoucherService = $basketVoucherService;
     }
 
     /**
@@ -54,7 +69,7 @@ final class Basket
      */
     public function basket(ID $basketId): BasketDataType
     {
-        return $this->basketService->basket($basketId);
+        return $this->basketFinderService->basket($basketId);
     }
 
     /**
@@ -64,7 +79,7 @@ final class Basket
      */
     public function publicBasket(ID $basketId): PublicBasketDataType
     {
-        return $this->basketService->publicBasket($basketId);
+        return $this->basketFinderService->publicBasket($basketId);
     }
 
     /**
@@ -73,7 +88,7 @@ final class Basket
      */
     public function basketAddItem(ID $basketId, ID $productId, float $amount): BasketDataType
     {
-        return $this->basketService->addBasketItem($basketId, $productId, $amount);
+        return $this->basketItemService->addItemToBasket($basketId, $productId, $amount);
     }
 
     /**
@@ -82,7 +97,7 @@ final class Basket
      */
     public function basketRemoveItem(ID $basketId, ID $basketItemId, float $amount): BasketDataType
     {
-        return $this->basketService->removeBasketItem($basketId, $basketItemId, $amount);
+        return $this->basketItemService->removeItemFromBasket($basketId, $basketItemId, $amount);
     }
 
     /**
@@ -145,7 +160,10 @@ final class Basket
      */
     public function basketAddVoucher(ID $basketId, string $voucherNumber): BasketDataType
     {
-        return $this->basketService->addVoucher($basketId, $voucherNumber);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
+        $this->basketVoucherService->addVoucherToBasket($voucherNumber, $basket);
+
+        return $basket;
     }
 
     /**
@@ -154,7 +172,10 @@ final class Basket
      */
     public function basketRemoveVoucher(ID $basketId, ID $voucherId): BasketDataType
     {
-        return $this->basketService->removeVoucher($basketId, $voucherId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
+        $this->basketVoucherService->removeVoucherFromBasket($voucherId, $basket);
+
+        return $basket;
     }
 
     /**

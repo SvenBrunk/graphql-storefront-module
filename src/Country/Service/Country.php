@@ -35,7 +35,7 @@ final class Country extends AbstractActiveFilterService
                 false
             );
         } catch (NotFound $e) {
-            throw CountryNotFound::byId((string)$id);
+            throw new CountryNotFound((string)$id);
         }
 
         if ($country->isActive()) {

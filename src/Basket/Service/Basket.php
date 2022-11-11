@@ -31,12 +31,10 @@ use OxidEsales\GraphQL\Storefront\Basket\Event\BeforeBasketRemove;
 use OxidEsales\GraphQL\Storefront\Basket\Event\BeforeRemoveItem;
 use OxidEsales\GraphQL\Storefront\Basket\Exception\BasketAccessForbidden;
 use OxidEsales\GraphQL\Storefront\Basket\Exception\BasketNotFound;
-use OxidEsales\GraphQL\Storefront\Basket\Infrastructure\Basket as BasketInfraService;
 use OxidEsales\GraphQL\Storefront\Basket\Infrastructure\Basket as BasketInfrastructure;
 use OxidEsales\GraphQL\Storefront\Basket\Infrastructure\Repository as BasketRepository;
 use OxidEsales\GraphQL\Storefront\Country\DataType\Country as CountryDataType;
 use OxidEsales\GraphQL\Storefront\Country\Service\Country as CountryService;
-use OxidEsales\GraphQL\Storefront\Customer\DataType\Customer as CustomerDataType;
 use OxidEsales\GraphQL\Storefront\Customer\Exception\CustomerNotFound;
 use OxidEsales\GraphQL\Storefront\Customer\Infrastructure\Customer as CustomerInfrastructure;
 use OxidEsales\GraphQL\Storefront\Customer\Service\Customer as CustomerService;
@@ -72,17 +70,8 @@ final class Basket
     /** @var Legacy */
     private $legacyService;
 
-    /** @var BasketInfraService */
-    private $basketInfraService;
-
-    /** @var ProductService */
-    private $productService;
-
     /** @var SharedInfrastructure */
     private $sharedInfrastructure;
-
-    /** @var BasketVoucher */
-    private $basketVoucherService;
 
     /** @var VoucherInfrastructure */
     private $voucherInfrastructure;
@@ -108,16 +97,15 @@ final class Basket
     /** @var EventDispatcherInterface */
     private $eventDispatcher;
 
+    private BasketFinder $basketFinderService;
+
     public function __construct(
         Repository $repository,
         BasketRepository $basketRepository,
         Authentication $authenticationService,
         Authorization $authorizationService,
         Legacy $legacyService,
-        BasketInfraService $basketInfraService,
-        ProductService $productService,
         SharedInfrastructure $sharedInfrastructure,
-        BasketVoucher $basketVoucherService,
         VoucherInfrastructure $voucherInfrastructure,
         CustomerInfrastructure $customerInfrastructure,
         BasketInfrastructure $basketInfrastructure,
@@ -125,17 +113,15 @@ final class Basket
         VoucherRepository $voucherRepository,
         CountryService $countryService,
         CustomerService $customerService,
-        EventDispatcherInterface $eventDispatcher
+        EventDispatcherInterface $eventDispatcher,
+        BasketFinder $basketFinderService
     ) {
         $this->repository = $repository;
         $this->basketRepository = $basketRepository;
         $this->authenticationService = $authenticationService;
         $this->authorizationService = $authorizationService;
         $this->legacyService = $legacyService;
-        $this->basketInfraService = $basketInfraService;
-        $this->productService = $productService;
         $this->sharedInfrastructure = $sharedInfrastructure;
-        $this->basketVoucherService = $basketVoucherService;
         $this->voucherInfrastructure = $voucherInfrastructure;
         $this->voucherRepository = $voucherRepository;
         $this->basketInfrastructure = $basketInfrastructure;
@@ -144,63 +130,7 @@ final class Basket
         $this->countryService = $countryService;
         $this->customerService = $customerService;
         $this->eventDispatcher = $eventDispatcher;
-    }
-
-    /**
-     * @throws BasketAccessForbidden
-     * @throws BasketNotFound
-     * @throws InvalidToken
-     */
-    public function basket(ID $id): BasketDataType
-    {
-        $basket = $this->getAuthenticatedCustomerBasket($id);
-
-        $this->basketInfrastructure->checkBasketItems($basket->getEshopModel());
-
-        $this->sharedInfrastructure->getBasket($basket);
-
-        return $basket;
-    }
-
-    public function publicBasket(ID $id): PublicBasketDataType
-    {
-        $basket = $this->basketRepository->getBasketById((string)$id);
-
-        if ($basket->public() === false || $basket->title() === 'noticelist') {
-            throw BasketAccessForbidden::basketIsPrivate();
-        }
-
-        return new PublicBasketDataType($basket->getEshopModel());
-    }
-
-    /**
-     * @throws BasketAccessForbidden
-     * @throws BasketNotFound
-     * @throws InvalidToken
-     */
-    public function getAuthenticatedCustomerBasket(ID $id): BasketDataType
-    {
-        $basket = $this->basketRepository->getBasketById((string)$id);
-        $userId = (string)$this->authenticationService->getUser()->id();
-
-        if (!$basket->belongsToUser($userId)) {
-            throw BasketAccessForbidden::byAuthenticatedUser();
-        }
-
-        return $basket;
-    }
-
-    public function basketByOwnerAndTitle(CustomerDataType $customer, string $title): BasketDataType
-    {
-        return $this->basketRepository->customerBasketByTitle($customer, $title);
-    }
-
-    /**
-     * @return BasketDataType[]
-     */
-    public function basketsByOwner(CustomerDataType $customer): array
-    {
-        return $this->basketRepository->customerBaskets($customer);
+        $this->basketFinderService = $basketFinderService;
     }
 
     /**
@@ -211,6 +141,7 @@ final class Basket
     {
         $this->eventDispatcher->dispatch(
             new BeforeBasketRemove($id),
+            BeforeBasketRemove::class
         );
 
         $basket = $this->basketRepository->getBasketById((string)$id);
@@ -248,62 +179,10 @@ final class Basket
                 $ignoreSubShop
             );
         } catch (NotFound $e) {
-            throw CustomerNotFound::byId($id);
+            throw new CustomerNotFound($id);
         }
 
         return $customer;
-    }
-
-    public function addBasketItem(ID $basketId, ID $productId, float $amount): BasketDataType
-    {
-        $this->eventDispatcher->dispatch(
-            new BeforeAddItem($basketId, $productId, $amount),
-        );
-
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
-
-        $this->productService->product($productId);
-
-        $event = new BeforeAddItem(
-            $basketId,
-            $productId,
-            $amount
-        );
-
-        $this->eventDispatcher->dispatch(
-            $event,
-        );
-
-        $this->basketInfraService->addBasketItem($basket, $productId, $amount);
-
-        $this->eventDispatcher->dispatch(
-            new AfterAddItem($basketId, $productId, $amount),
-        );
-
-        return $basket;
-    }
-
-    public function removeBasketItem(ID $basketId, ID $basketItemId, float $amount): BasketDataType
-    {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
-
-        $event = new BeforeRemoveItem(
-            $basketId,
-            $basketItemId,
-            $amount
-        );
-
-        $this->eventDispatcher->dispatch(
-            $event,
-        );
-
-        $this->basketInfraService->removeBasketItem($basket, $basketItemId, $event->getAmount());
-
-        $this->eventDispatcher->dispatch(
-            new AfterRemoveItem($basketId, $basketItemId, $amount)
-        );
-
-        return $basket;
     }
 
     /**
@@ -335,9 +214,9 @@ final class Basket
      */
     public function makePublic(ID $basketId): BasketDataType
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
 
-        $this->basketInfraService->assignAndSave(
+        $this->basketInfrastructure->assignAndSave(
             $basket,
             [
                 'oxuserbaskets__oxpublic' => 1
@@ -352,9 +231,9 @@ final class Basket
      */
     public function makePrivate(ID $basketId): BasketDataType
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
 
-        $this->basketInfraService->assignAndSave(
+        $this->basketInfrastructure->assignAndSave(
             $basket,
             [
                 'oxuserbaskets__oxpublic' => 0
@@ -371,24 +250,6 @@ final class Basket
         return new BasketCost($basketModel);
     }
 
-    public function addVoucher(ID $basketId, string $voucherNumber): BasketDataType
-    {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
-
-        $this->basketVoucherService->addVoucherToBasket($voucherNumber, $basket);
-
-        return $basket;
-    }
-
-    public function removeVoucher(ID $basketId, ID $voucherId): BasketDataType
-    {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
-
-        $this->basketVoucherService->removeVoucherFromBasket($voucherId, $basket);
-
-        return $basket;
-    }
-
     /**
      * @throws BasketAccessForbidden
      * @throws BasketNotFound
@@ -397,13 +258,13 @@ final class Basket
      */
     public function setDeliveryAddress(ID $basketId, ?ID $deliveryAddressId = null): BasketDataType
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
 
         if (
             null !== $deliveryAddressId &&
             !$this->deliveryAddressBelongsToUser($deliveryAddressId)
         ) {
-            throw DeliveryAddressNotFound::byId((string)$deliveryAddressId);
+            throw new DeliveryAddressNotFound((string)$deliveryAddressId);
         }
 
         $deliveryAddressId = $deliveryAddressId ? (string)$deliveryAddressId : null;
@@ -449,7 +310,7 @@ final class Basket
      */
     public function isPaymentMethodAvailableForBasket(ID $basketId, ID $paymentId): bool
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
         $deliveryMethodId = (string)$basket->getDeliveryMethodId()->val();
 
         if (!$deliveryMethodId) {
@@ -470,7 +331,7 @@ final class Basket
      */
     public function setPaymentIdBasket(ID $basketId, ID $paymentId): BasketDataType
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
 
         $this->basketInfrastructure->assignAndSave(
             $basket,
@@ -498,7 +359,7 @@ final class Basket
      */
     public function setDeliveryMethodIdToBasket(ID $basketId, ID $deliveryId): BasketDataType
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
 
         // Update delivery method id for user basket
         // Resets payment id as it may be not available for new delivery method
@@ -520,7 +381,8 @@ final class Basket
     {
         /** @var BeforeBasketDeliveryMethods $event */
         $event = $this->eventDispatcher->dispatch(
-            new BeforeBasketDeliveryMethods($basketId)
+            new BeforeBasketDeliveryMethods($basketId),
+            BeforeBasketDeliveryMethods::class
         );
 
         if ($event->getDeliveryMethods() !== null) {
@@ -538,6 +400,7 @@ final class Basket
         $event = new BeforeBasketPayments($basketId);
         $this->eventDispatcher->dispatch(
             $event,
+            BeforeBasketPayments::class
         );
 
         if ($event->getPayments() !== null) {
@@ -559,7 +422,7 @@ final class Basket
 
     private function getAvailableDeliveries(ID $basketId): array
     {
-        $basket = $this->getAuthenticatedCustomerBasket($basketId);
+        $basket = $this->basketFinderService->getAuthenticatedCustomerBasket($basketId);
         $customer = $this->customerService->customer((string)$basket->getUserId()->val());
         $country = $this->getBasketDeliveryCountryId($basket);
 

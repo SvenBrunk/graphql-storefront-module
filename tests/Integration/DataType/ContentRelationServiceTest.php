@@ -41,7 +41,7 @@ final class ContentRelationServiceTest extends BaseTestCase
 
         $content = $result['body']['data']['content'];
         $this->assertCount(1, $content['seo']);
-        $this->assertRegExp('@https?://.*/Wie-bestellen/@', $content['seo']['url']);
+        $this->assertMatchesRegularExpression('@https?://.*/Wie-bestellen/@', $content['seo']['url']);
     }
 
     public function testGetContentCategoryRelation(): void

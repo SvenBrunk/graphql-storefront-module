@@ -48,7 +48,7 @@ final class ContentMultiLanguageTest extends TestCase
         $this->assertEquals(self::ACTIVE_CONTENT, $content['id']);
         $this->assertEquals($title, $content['title']);
         $this->assertEquals($categoryTitle, $content['category']['title']);
-        $this->assertRegExp('@https?://.*/' . $seo . '/$@', $content['seo']['url']);
+        $this->assertMatchesRegularExpression('@https?://.*/' . $seo . '/$@', $content['seo']['url']);
     }
 
     public function providerGetContentMultiLanguage()

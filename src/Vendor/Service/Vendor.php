@@ -33,7 +33,7 @@ final class Vendor extends AbstractActiveFilterService
                 VendorDataType::class
             );
         } catch (NotFound $e) {
-            throw VendorNotFound::byId((string)$id);
+            throw new VendorNotFound((string)$id);
         }
 
         if ($vendor->isActive()) {

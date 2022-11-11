@@ -68,12 +68,12 @@ final class BannerTest extends BaseTestCase
         ], $banner['product']);
         $this->assertEquals('Banner 1', $banner['title']);
 
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '@https?://.*/Bekleidung/Sportswear/Neopren/Anzuege/Neoprenanzug-NPX-ASSASSIN.html$@',
             $banner['link']
         );
 
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '@https?://.*/out/pictures/promo/surfer_wave_promo.jpg$@',
             $banner['picture']
         );
@@ -109,12 +109,12 @@ final class BannerTest extends BaseTestCase
         $this->assertNull($banner['product']);
         $this->assertEquals('Banner 4', $banner['title']);
 
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '@https?://.*/Wakeboarding/Wakeboards/.*?$@',
             $banner['link']
         );
 
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '@https?://.*/out/pictures/promo/banner4de\(1\)_promo.jpg$@',
             $banner['picture']
         );

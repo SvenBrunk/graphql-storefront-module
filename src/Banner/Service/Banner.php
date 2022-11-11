@@ -56,7 +56,7 @@ final class Banner
             /** @var BannerDataType $banner */
             $banner = $this->repository->getById((string)$id, BannerDataType::class);
         } catch (NotFound $e) {
-            throw BannerNotFound::byId((string)$id);
+            throw new BannerNotFound((string)$id);
         }
 
         if ($banner->isActive()) {
@@ -75,11 +75,10 @@ final class Banner
      */
     public function banners(): array
     {
-        $userId = null;
-
         try {
             $userId = (string)$this->authenticationService->getUser()->id();
         } catch (InvalidToken $e) {
+            $userId = null;
         }
 
         return $this->bannerInfrastructure->banners($userId);

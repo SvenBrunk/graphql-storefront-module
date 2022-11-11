@@ -15,13 +15,8 @@ use function sprintf;
 
 final class NewsletterStatusNotFound extends NotFound
 {
-    public static function byUserId(string $userId): self
+    public function __construct(string $email)
     {
-        return new self(sprintf('Newsletter subscription status was not found for userid: %s', $userId));
-    }
-
-    public static function byEmail(string $email): self
-    {
-        return new self(sprintf('Newsletter subscription status was not found for: %s', $email));
+        parent::__construct(sprintf('Newsletter subscription status was not found for: %s', $email));
     }
 }

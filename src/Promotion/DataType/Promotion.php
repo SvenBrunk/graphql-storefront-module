@@ -33,8 +33,8 @@ final class Promotion implements ShopModelAwareInterface
     {
         $this->actionsModel = $actionsModel;
 
-        if ($actionsModel->getRawFieldData('oxtype') !== self::PROMOTION_ACTION_TYPE) {
-            throw NotFound::notFound();
+        if ((string) $actionsModel->getRawFieldData('oxtype') !== self::PROMOTION_ACTION_TYPE) {
+            throw new NotFound();
         }
     }
 

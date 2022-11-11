@@ -34,7 +34,7 @@ final class Action extends AbstractActiveFilterService
                 ActionDataType::class
             );
         } catch (NotFound $e) {
-            throw ActionNotFound::byId($id);
+            throw new ActionNotFound($id);
         }
 
         if ($action->isActive()) {

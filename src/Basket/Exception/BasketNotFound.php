@@ -15,13 +15,8 @@ use function sprintf;
 
 final class BasketNotFound extends NotFound
 {
-    public static function byId(string $id): self
+    public function __construct(string $id)
     {
-        return new self(sprintf('Basket was not found by id: %s', $id));
-    }
-
-    public static function byOwnerAndTitle(string $userId, string $title): self
-    {
-        return new self(sprintf('Basket "%s" not found for user "%s"', $title, $userId));
+        parent::__construct(sprintf('Basket was not found by id: %s', $id));
     }
 }

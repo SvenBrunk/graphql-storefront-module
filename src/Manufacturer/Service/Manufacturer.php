@@ -34,7 +34,7 @@ final class Manufacturer extends AbstractActiveFilterService
                 ManufacturerDataType::class
             );
         } catch (NotFound $e) {
-            throw ManufacturerNotFound::byId((string)$id);
+            throw new ManufacturerNotFound((string)$id);
         }
 
         if ($manufacturer->isActive()) {

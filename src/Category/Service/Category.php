@@ -31,7 +31,7 @@ final class Category extends AbstractActiveFilterService
             /** @var CategoryDataType $category */
             $category = $this->repository->getById((string)$id, CategoryDataType::class);
         } catch (NotFound $e) {
-            throw CategoryNotFound::byId((string)$id);
+            throw new CategoryNotFound((string)$id);
         }
 
         if ($category->isActive()) {
