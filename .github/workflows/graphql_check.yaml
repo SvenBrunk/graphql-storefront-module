@@ -102,7 +102,7 @@ jobs:
             make up
             sleep 2
 
-      - uses: kamilkisiela/graphql-inspector@master
+      - uses: kamilkisiela/graphql-inspector@v3.4.0
         with:
           schema: 'http://localhost.local/graphql'
           endpoint: 'http://localhost.local/graphql'
