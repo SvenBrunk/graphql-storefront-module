@@ -37,7 +37,7 @@ final class Attribute implements ShopModelAwareInterface
      */
     public function getTitle(): string
     {
-        return (string)$this->attribute->getRawFieldData('oxtitle');
+        return (string)($this->attribute->getRawFieldData('oxtitle') ?? $this->attribute->getTitle());
     }
 
     public static function getModelClass(): string

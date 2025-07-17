@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - Unreleased
+## [3.1.0] - Unreleased
+
+### Added
+- `variantSelections` query for fetching multidimensional variants [PR-11](https://github.com/OXID-eSales/graphql-storefront-module/pull/11)
+- Add the `CategoryAttribute` data type and possibility to get Attributes for category [PR-13](https://github.com/OXID-eSales/graphql-storefront-module/pull/13)
+- Workflow trigger to update schema in documentation
+
+### Changed
+- Replace webmozart/path-util usage with symfony/filesystem
+
+## [3.0.0] - 2023-06-08
 
 ### Added
 - Support for PHP 8.1
@@ -16,16 +26,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Classes:
   - ``OxidEsales\GraphQL\Storefrnt\Address\Exception\DeliveryAddressMissingFields``
   - ``OxidEsales\GraphQL\Storefrnt\Address\Exception\InvoiceAddressMissingFields``
+- Module upgraded for eshop version 7
+    - NAME-constant removed from events
+    - Support PHP 7.4
 
 ### Changed
 - Refactored NotFound exception and children to create instance with constructor instead of static methods.
 - Moved methods from Basket-Service to BasketItem, BasketVoucher and BasketFinder-Service
 - License file was updated to be consistent with other OXID eSales modules
+- Module upgraded for eshop version 7
+    - Assetspath updated
+    - Migrations config structure updated
 
 ## [2.2.0] - Unreleased
 
 ### Added
 - Dependency on Base module. Base module cannot be deactivated till Storefront is active.
+- Workflow trigger to update schema in documentation
+
+### Changed
+- License updated - now using OXID Module and Component License
 
 ## [2.1.0] - 2022-07-14
 
@@ -41,6 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - ``OxidEsales\GraphQL\Storefront\Basket\Service\BasketRelationService::owner()`` return value will be null for anonymous user.
+
+## [2.0.2] - Unreleased
+
+### Added
+- Workflow trigger to update schema in documentation
 
 ## [2.0.1] - 2022-01-03
 
@@ -132,7 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `oxid-esales/graphql-account`
     - `oxid-esales/graphql-checkout`
 
-[2.2.0]: https://github.com/OXID-eSales/graphql-storefront-module/compare/v2.1.0...v2.2.0
+[3.0.0]: https://github.com/OXID-eSales/graphql-storefront-module/compare/v2.1.0...v3.0.0
+[2.2.0]: https://github.com/OXID-eSales/graphql-storefront-module/compare/v2.1.0...b-6.5.x
 [2.1.0]: https://github.com/OXID-eSales/graphql-storefront-module/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/OXID-eSales/graphql-storefront-module/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/OXID-eSales/graphql-storefront-module/compare/v1.0.0...v2.0.0
